@@ -1,0 +1,65 @@
+library(shiny)
+
+# Define UI for the application
+ui <- fluidPage(
+  
+  #Add company logo
+  tags$img(src = "company_logo.png", height = "100px", width = "auto", style = "display:block; margin-left: 0; padding: 20px;"),
+  
+  
+  # Application title
+  titlePanel("Uncertainty Simulation and Histogram"),
+  
+  # Sidebar with input controls
+  sidebarLayout(
+    sidebarPanel(
+      numericInput("coverage_factor", "Coverage factor:", 2),
+      numericInput("uncertainty", "Calculated uncertainty:", 1),
+      numericInput("target", "Target:", 0),
+      numericInput("low_limit", "Low Limit:", -5),
+      numericInput("high_limit", "High Limit:", 5),
+      numericInput("frequency", "Frequency count:", 100, min = 1),
+      actionButton("simulate", "Simulate")
+    ),
+    
+    # Main panel to display the histogram and table
+    mainPanel(
+      plotOutput("histogram"),
+      tableOutput("data_table")
+    )
+  )
+)
+
+# Define server logic for the application
+server <- function(input, output) {
+  
+  # Function to simulate data based on input parameters
+  simulate_data <- function(coverage_factor, uncertainty, target, frequency) {
+    simulated_data <- rnorm(frequency, target, uncertainty / coverage_factor)
+    return(simulated_data)
+  }
+  
+  # Reactive expression to generate simulated data
+  simulated_data <- eventReactive(input$simulate, {
+    simulate_data(input$coverage_factor, input$uncertainty, input$target, input$frequency)
+  }, ignoreNULL = FALSE)
+  
+  # Render the histogram
+  output$histogram <- renderPlot({
+    hist(simulated_data(), main = "Simulated Data Histogram",
+         xlab = "Value", ylab = "Frequency", col = "lightblue", border = "black",
+         xlim = c(input$low_limit, input$high_limit))
+    
+    # Add vertical lines for Low Limit and High Limit
+    abline(v = input$low_limit, col = "red", lwd = 2, lty = 2)
+    abline(v = input$high_limit, col = "blue", lwd = 2, lty = 2)
+  })
+  
+  # Render the table
+  output$data_table <- renderTable({
+    data.frame(Simulated_Data = simulated_data())
+  }, rownames = TRUE)
+}
+
+# Run the Shiny app
+shinyApp(ui, server)
